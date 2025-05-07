@@ -1,9 +1,5 @@
-
 function App() {
-
-  return (
-    <div className="text-xl text-center py-10 font-bold ">Hello world</div>
-  )
+  return <div className="text-xl font-bold text-center text-blue-500">Hello world</div>;
 }
 
-export default App
+export default App;
