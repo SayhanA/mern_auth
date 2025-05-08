@@ -1,24 +1,27 @@
 import express from "express";
 import "dotenv/config";
+import path from "path";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
 const app = express();
 const port = process.env.PORT || 4000;
 
+// Set view engine ------
+app.set("view engine", "ejs");
+
 // Middlewars ----------
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({ credentials: true }));
+app.use(cors({ credentials: true, origin: [process.env.FRONTEND_URL] }));
+app.use(express.static(path.join(path.resolve(), "views")));
 
 //routes
 app.use((req, res, next) => {
-  res.send("<h1>Hello world.</h1>");
+  res.render("index", {
+    title: "Hello",
+  });
 });
-
-
-
-
 
 // 404 handler ----------
 app.use((req, res, next) => {
