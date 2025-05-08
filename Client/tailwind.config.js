@@ -9,6 +9,8 @@ export default {
       colors: {
         background: 'rgba(var(--background))',
         grape : 'rgba(var(--grape))',
+        text: 'rgba(var(--text))',
+        border: 'rgba(var(--border))'
       }
     },
   },

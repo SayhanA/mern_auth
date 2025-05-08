@@ -2,8 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+.light {
   --background: 255, 255, 255;
   --border: 229, 231, 235;
   --grape: 114, 35, 204;
+  --text-d: 255, 255, 255;
+  --text: 31, 41, 55;
+}
+
+.dark {
+  --background: 0, 0, 0;
+  --border: 129, 131, 135;
+  --grape: 114, 35, 204;
+  --text: 225, 225, 225;
+}
+
+body {
+  background-color: rgba(var(--background));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: 255, 255, 255;
+    --border: 229, 231, 235;
+    --grape: 114, 35, 204;
+    --text-d: 255, 255, 255;
+    --text: 31, 41, 55;
+  }
 }
