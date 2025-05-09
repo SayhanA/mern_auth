@@ -1,8 +1,9 @@
 import AppError from "../utlis/AppError.js";
-import { catchAsyncError } from "../middlewars/catchAsyncError";
+import { catchAsyncError } from "../middlewars/catchAsyncError.js";
 import { validationResult } from "express-validator";
 import { User } from "../models/user.js";
 import { sendVerificationEmail } from "../node_mailer/email.js";
+import { sendVerificationTokenByCall } from "../twilio/twilio.js";
 
 export const register = catchAsyncError(async (req, res, next) => {
   try {
@@ -10,7 +11,7 @@ export const register = catchAsyncError(async (req, res, next) => {
 
     const isValidate = validationResult(req);
     if (!isValidate.isEmpty()) {
-      return next(new AppError(isValidate.array()[0], 400));
+      return next(new AppError(isValidate.array()[0]?.msg, 400));
     }
 
     const existionUser = await User.findOne({
@@ -85,5 +86,9 @@ async function sendVerificationCode(
       (username = user.name),
       verificationToken
     );
+  } else if (verificationMethod === "phone") {
+    sendVerificationTokenByCall(verificationToken, phone);
+  } else {
+    throw new AppError("Invalid verification method", 500);
   }
 }
