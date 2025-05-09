@@ -52,8 +52,34 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
+userSchema.pre("findOneAndUpdate", async function (next) {
+  const update = this.getUpdate();
+  if (update.password) {
+    const salt = await bcrypt.genSalt(10);
+    update.password = await bcrypt.hash(this.password, salt);
+    this.setUpdate(update);
+  }
+  next();
+});
+
 userSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-export const user = mongoose.model("User", userSchema);
+userSchema.methods.generateVerificationToken = function () {
+  function generateRandomFiveDigitNumber() {
+    const firstDigit = Math.floor(Math.random() * 9) + 1;
+    const remainingDigits = Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, 0);
+
+    return firstDigit + remainingDigits;
+  }
+  const verificationToken = generateRandomFiveDigitNumber();
+  this.verificationToken = verificationToken;
+  this.verificationTokenExpiredAt = Date.now() + 5 * 60 * 1000;
+
+  return verificationToken;
+};
+
+export const User = mongoose.model("User", userSchema);
