@@ -2,6 +2,7 @@ import AppError from "../utlis/AppError.js";
 import { catchAsyncError } from "../middlewars/catchAsyncError";
 import { validationResult } from "express-validator";
 import { User } from "../models/user.js";
+import { sendVerificationEmail } from "../node_mailer/email.js";
 
 export const register = catchAsyncError(async (req, res, next) => {
   try {
@@ -51,8 +52,14 @@ export const register = catchAsyncError(async (req, res, next) => {
     const verificationToken = user.generateVerificationToken();
     const response = await user.save();
 
-    sendVerificationCode(verificationMethod, verificationToken, email, phone);
-    
+    sendVerificationCode(
+      verificationMethod,
+      verificationToken,
+      email,
+      phone,
+      user
+    );
+
     res.status(201).json({
       success: true,
       message:
@@ -63,3 +70,20 @@ export const register = catchAsyncError(async (req, res, next) => {
     next(error);
   }
 });
+
+async function sendVerificationCode(
+  verificationMethod,
+  verificationToken,
+  email,
+  phone,
+  user
+) {
+  if (verificationMethod === "email") {
+    sendVerificationEmail(
+      email,
+      (subject = "Your verification code"),
+      (username = user.name),
+      verificationToken
+    );
+  }
+}
