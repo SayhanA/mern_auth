@@ -1,4 +1,4 @@
-import { verificationEmailTemplate } from "./email_template.js";
+import { verificationEmailTemplate, resetPasswordTemplate } from "./email_template.js";
 import "dotenv/config";
 import transporter from "./node_mailer.config.js";
 
@@ -24,10 +24,12 @@ export const sendResetPasswordEmail = async (
   username,
   resetLink
 ) => {
-  const option = {
+  const options = {
     from: process.env.SMTP_USER,
     to: email,
     subject,
     html: resetPasswordTemplate(username, resetLink),
   };
+
+  return await transporter.sendMail(options);
 };

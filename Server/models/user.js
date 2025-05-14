@@ -9,14 +9,12 @@ const userSchema = new Schema(
     },
     email: {
       type: String,
-      required: true,
-      unique: true,
+      required: false,
     },
     password: {
       type: String,
       required: true,
       minLength: [6, "Password must have at least 6 characters."],
-      maxLength: [12, "Password cannot have more then 12 characters."],
     },
     phone: {
       type: String,
@@ -47,9 +45,13 @@ userSchema.pre("save", async function (next) {
     return next();
   }
 
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    return next();
+  } catch (error) {
+    return next(error);
+  }
 });
 
 userSchema.pre("findOneAndUpdate", async function (next) {
@@ -82,4 +84,4 @@ userSchema.methods.generateVerificationToken = function () {
   return verificationToken;
 };
 
-export const User = mongoose.model("User", userSchema);
+export const User = mongoose.models.User || mongoose.model("User", userSchema);

@@ -4,6 +4,9 @@ import { validationResult } from "express-validator";
 import { User } from "../models/user.js";
 import { sendVerificationEmail } from "../node_mailer/email.js";
 import { sendVerificationTokenByCall } from "../twilio/twilio.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export const register = catchAsyncError(async (req, res, next) => {
   try {
@@ -51,8 +54,14 @@ export const register = catchAsyncError(async (req, res, next) => {
     const user = await User.create(userData);
 
     const verificationToken = user.generateVerificationToken();
-    const response = await user.save();
-
+    let response;
+    try {
+      response = await user.save();
+      console.log("🚀 ~ register ~ response:", response);
+    } catch (err) {
+      console.error("❌ Error saving user:", err);
+      return next(err);
+    }
     sendVerificationCode(
       verificationMethod,
       verificationToken,
@@ -77,13 +86,16 @@ async function sendVerificationCode(
   verificationToken,
   email,
   phone,
-  user
+  user,
 ) {
+  let subject = "Your verification code";
+  let username = user.name;
+
   if (verificationMethod === "email") {
     sendVerificationEmail(
       email,
-      (subject = "Your verification code"),
-      (username = user.name),
+      subject,
+      username,
       verificationToken
     );
   } else if (verificationMethod === "phone") {
