@@ -57,7 +57,7 @@ export const register = catchAsyncError(async (req, res, next) => {
     let response;
     try {
       response = await user.save();
-      console.log("🚀 ~ register ~ response:", response);
+      // console.log("🚀 ~ register ~ response:", response);
     } catch (err) {
       console.error("❌ Error saving user:", err);
       return next(err);
@@ -86,21 +86,71 @@ async function sendVerificationCode(
   verificationToken,
   email,
   phone,
-  user,
+  user
 ) {
   let subject = "Your verification code";
   let username = user.name;
 
   if (verificationMethod === "email") {
-    sendVerificationEmail(
-      email,
-      subject,
-      username,
-      verificationToken
-    );
+    sendVerificationEmail(email, subject, username, verificationToken);
   } else if (verificationMethod === "phone") {
     sendVerificationTokenByCall(verificationToken, phone);
   } else {
     throw new AppError("Invalid verification method", 500);
   }
 }
+
+export const verifyOTP = catchAsyncError(async (req, res, next) => {
+  const { email, opt, phone } = req.body;
+
+  try {
+    const userAllEntries = await User.find({
+      $or: [
+        { email, isVerified: false },
+        { phone, isVerified: false },
+      ],
+    }).sort({ createdAt: -1 });
+
+    if (!userAllEntries) {
+      return next(new AppError("User not found", 404));
+    }
+
+    let user;
+
+    if (userAllEntries.length > 1) {
+      user = userAllEntries[0];
+
+      await User.deleteMany({
+        _id: { $ne: user._id },
+        $or: [
+          { email, isVerified: false },
+          { phone, isVerified: false },
+        ],
+      });
+    } else {
+      user = userAllEntries[0];
+    }
+
+    if (Number(user.verificationToken) !== Number(opt)) {
+      return next(new AppError("Invalid OTP", 400));
+    }
+
+    const currentTime = new Date();
+    const verificationTokenExpire = user.verificationTokenExpiredAt;
+
+    if (currentTime > verificationTokenExpire) {
+      return next(new AppError("OTP expired", 400));
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiredAt = undefined;
+    user.save({ validateModifiedOnly: true });
+    res.status(200).json({
+      success: true,
+      message: "User verified successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
