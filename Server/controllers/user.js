@@ -18,18 +18,20 @@ export const register = catchAsyncError(async (req, res, next) => {
       return next(new AppError(isValidate.array()[0]?.msg, 400));
     }
 
+    const conditions = [];
+
+    if (verificationMethod === "email") {
+      conditions.push({ $and: [{ email }, { isVerified: true }] });
+    }
+    if (verificationMethod === "phone") {
+      conditions.push({ $and: [{ phone }, { isVerified: true }] });
+    }
+
     const existionUser = await User.findOne({
-      $or: [
-        {
-          email,
-          isVerified: true,
-        },
-        {
-          phone,
-          isVerified: true,
-        },
-      ],
+      $or: conditions,
     });
+
+    console.log({ existionUser });
 
     if (existionUser) {
       return next(new AppError("User is already exist!", 400));
@@ -110,7 +112,7 @@ export const verifyOTP = catchAsyncError(async (req, res, next) => {
         { email, isVerified: false },
         { phone, isVerified: false },
       ],
-    })
+    });
 
     const userAllEntries = userAllData.reverse();
 
@@ -128,15 +130,16 @@ export const verifyOTP = catchAsyncError(async (req, res, next) => {
     const verificationTokenExpire = user.verificationTokenExpiredAt;
 
     if (currentTime > verificationTokenExpire) {
-      await User.deleteMany({
-        _id: { $ne: user._id },
-        $or: [
-          { email, isVerified: false },
-          { phone, isVerified: false },
-        ],
-      });
       return next(new AppError("OTP expired", 400));
     }
+
+    await User.deleteMany({
+      _id: { $ne: user._id },
+      $or: [
+        { email, isVerified: false },
+        { phone, isVerified: false },
+      ],
+    });
 
     user.isVerified = true;
     user.verificationToken = undefined;
