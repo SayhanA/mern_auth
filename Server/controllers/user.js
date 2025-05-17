@@ -5,6 +5,7 @@ import { User } from "../models/user.js";
 import { sendVerificationEmail } from "../node_mailer/email.js";
 import { sendVerificationTokenByCall } from "../twilio/twilio.js";
 import dotenv from "dotenv";
+import { sendToken } from "../utlis/sendToken.js";
 
 dotenv.config();
 
@@ -104,32 +105,20 @@ export const verifyOTP = catchAsyncError(async (req, res, next) => {
   const { email, opt, phone } = req.body;
 
   try {
-    const userAllEntries = await User.find({
+    const userAllData = await User.find({
       $or: [
         { email, isVerified: false },
         { phone, isVerified: false },
       ],
-    }).sort({ createdAt: -1 });
+    })
 
-    if (!userAllEntries) {
+    const userAllEntries = userAllData.reverse();
+
+    if (!userAllEntries || userAllEntries.length === 0) {
       return next(new AppError("User not found", 404));
     }
 
-    let user;
-
-    if (userAllEntries.length > 1) {
-      user = userAllEntries[0];
-
-      await User.deleteMany({
-        _id: { $ne: user._id },
-        $or: [
-          { email, isVerified: false },
-          { phone, isVerified: false },
-        ],
-      });
-    } else {
-      user = userAllEntries[0];
-    }
+    const user = userAllEntries[0];
 
     if (Number(user.verificationToken) !== Number(opt)) {
       return next(new AppError("Invalid OTP", 400));
@@ -139,18 +128,23 @@ export const verifyOTP = catchAsyncError(async (req, res, next) => {
     const verificationTokenExpire = user.verificationTokenExpiredAt;
 
     if (currentTime > verificationTokenExpire) {
+      await User.deleteMany({
+        _id: { $ne: user._id },
+        $or: [
+          { email, isVerified: false },
+          { phone, isVerified: false },
+        ],
+      });
       return next(new AppError("OTP expired", 400));
     }
 
     user.isVerified = true;
     user.verificationToken = undefined;
     user.verificationTokenExpiredAt = undefined;
-    user.save({ validateModifiedOnly: true });
-    res.status(200).json({
-      success: true,
-      message: "User verified successfully",
-    });
+    await user.save({ validateModifiedOnly: true });
+
+    return sendToken(user, 200, "User verified successfully", res);
   } catch (error) {
-    next(error);
+    return next(new AppError(error.message, 500));
   }
 });

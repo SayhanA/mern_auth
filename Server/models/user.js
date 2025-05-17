@@ -1,5 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 const userSchema = new Schema(
   {
@@ -82,6 +83,16 @@ userSchema.methods.generateVerificationToken = function () {
   this.verificationTokenExpiredAt = Date.now() + 5 * 60 * 1000;
 
   return verificationToken;
+};
+
+userSchema.methods.generateToken = async function () {
+  return jwt.sign(
+    { id: this._id, name: this.name, email: this.email },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN,
+    }
+  );
 };
 
 export const User = mongoose.models.User || mongoose.model("User", userSchema);
