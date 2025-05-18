@@ -2,10 +2,14 @@ import AppError from "../utlis/AppError.js";
 import { catchAsyncError } from "../middlewars/catchAsyncError.js";
 import { validationResult } from "express-validator";
 import { User } from "../models/user.js";
-import { sendVerificationEmail } from "../node_mailer/email.js";
+import {
+  sendResetPasswordEmail,
+  sendVerificationEmail,
+} from "../node_mailer/email.js";
 import { sendVerificationTokenByCall } from "../twilio/twilio.js";
 import dotenv from "dotenv";
 import { sendToken } from "../utlis/sendToken.js";
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -158,7 +162,6 @@ export const login = catchAsyncError(async (req, res, next) => {
   const user = await User.findOne({ email, isVerified: true }).select(
     "+password"
   );
-  console.log("🚀 ~ user.js:162 ~ login ~ user:", user);
   if (!user) {
     return next(new AppError("Invalid email or password", 401));
   }
@@ -193,4 +196,66 @@ export const getUser = catchAsyncError(async (req, res, next) => {
     message: "User fetched successfully",
     data: user,
   });
+});
+
+export const forgotPassword = catchAsyncError(async (req, res, next) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email, isVerified: true });
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  const resetToken = await user.generateResetPasswordToken();
+  console.log({ resetToken });
+  await user.save({ validateModifiedOnly: true });
+
+  const resetUrl = `${req.protocol}://${req.get(
+    "host"
+  )}/api/v1/user/reset_password/${resetToken}`;
+
+  try {
+    sendResetPasswordEmail(
+      user.email,
+      "Password Recovery",
+      user.name,
+      resetUrl
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Reset password link sent to ${user.email}`,
+      resetToken,
+    });
+  } catch (error) {
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpiredAt = undefined;
+    await user.save({ validateModifiedOnly: true });
+    return next(new AppError(error.message, 500));
+  }
+});
+
+export const resetPassword = catchAsyncError(async (req, res, next) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  const resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpiredAt: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new AppError("Invalid or expired token", 400));
+  }
+
+  user.password = password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpiredAt = undefined;
+  await user.save({ validateModifiedOnly: true });
+  return sendToken(user, 200, "Password reset successfully", res);
 });

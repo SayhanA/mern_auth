@@ -1,6 +1,9 @@
 import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import dotenv from "dotenv";
+dotenv.config();
 
 const userSchema = new Schema(
   {
@@ -16,7 +19,7 @@ const userSchema = new Schema(
       type: String,
       required: true,
       minLength: [6, "Password must have at least 6 characters."],
-      select: false
+      select: false,
     },
     phone: {
       type: String,
@@ -94,6 +97,17 @@ userSchema.methods.generateToken = async function () {
       expiresIn: process.env.JWT_EXPIRES_IN,
     }
   );
+};
+
+userSchema.methods.generateResetPasswordToken = async function () {
+  const resetToken = crypto.randomBytes(20).toString("hex");
+  this.resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+  this.resetPasswordExpiredAt = Date.now() + 10 * 60 * 1000;
+
+  return resetToken;
 };
 
 export const User = mongoose.models.User || mongoose.model("User", userSchema);
