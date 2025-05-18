@@ -16,6 +16,7 @@ const userSchema = new Schema(
       type: String,
       required: true,
       minLength: [6, "Password must have at least 6 characters."],
+      select: false
     },
     phone: {
       type: String,

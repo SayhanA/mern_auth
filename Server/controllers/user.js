@@ -151,3 +151,32 @@ export const verifyOTP = catchAsyncError(async (req, res, next) => {
     return next(new AppError(error.message, 500));
   }
 });
+
+export const login = catchAsyncError(async (req, res, next) => {
+  const { email, password } = req.body;
+
+  const user = await User.findOne({ email, isVerified: true}).select("+password");
+  console.log("🚀 ~ user.js:162 ~ login ~ user:", user)
+  if (!user) {
+    return next(new AppError("Invalid email or password", 401));
+  }
+
+  const isPasswordMatched = await user.comparePassword(password);
+  if (!isPasswordMatched) {
+    return next(new AppError("Invalid email or password", 401));
+  }
+
+  return sendToken(user, 200, "User logged in successfully", res);
+})
+
+export const logout = catchAsyncError(async (req, res, next) => {
+  res.cookie("token", null, {
+    expires: new Date(Date.now()),
+    httpOnly: true,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "User logged out successfully",
+  });
+});
