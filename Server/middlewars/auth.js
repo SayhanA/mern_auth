@@ -13,12 +13,11 @@ export const isAuthenticated = catchAsyncError((req, res, next) => {
     return next(new AppError("Please login to access this resource", 401));
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+  jwt.verify(token, process.env.JWT_SECRET, async(err, decoded) => {
     if (err) {
-      return next(new AppError("Invalid token", 401));
+        return next(new AppError("Invalid token", 401));
     }
-    console.log({ decoded });
-    const user = User.findById(decoded.id);
+    const user = await User.findById(decoded.id);
     if (!user) {
       return next(new AppError("User not found", 404));
     }

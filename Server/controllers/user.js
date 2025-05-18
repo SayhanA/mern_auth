@@ -155,8 +155,10 @@ export const verifyOTP = catchAsyncError(async (req, res, next) => {
 export const login = catchAsyncError(async (req, res, next) => {
   const { email, password } = req.body;
 
-  const user = await User.findOne({ email, isVerified: true}).select("+password");
-  console.log("🚀 ~ user.js:162 ~ login ~ user:", user)
+  const user = await User.findOne({ email, isVerified: true }).select(
+    "+password"
+  );
+  console.log("🚀 ~ user.js:162 ~ login ~ user:", user);
   if (!user) {
     return next(new AppError("Invalid email or password", 401));
   }
@@ -167,7 +169,7 @@ export const login = catchAsyncError(async (req, res, next) => {
   }
 
   return sendToken(user, 200, "User logged in successfully", res);
-})
+});
 
 export const logout = catchAsyncError(async (req, res, next) => {
   res.cookie("token", null, {
@@ -178,5 +180,17 @@ export const logout = catchAsyncError(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "User logged out successfully",
+  });
+});
+
+export const getUser = catchAsyncError(async (req, res, next) => {
+  const user = await User.findById(req.user.id).select("-password");
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+  res.status(200).json({
+    success: true,
+    message: "User fetched successfully",
+    data: user,
   });
 });

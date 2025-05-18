@@ -1,5 +1,5 @@
 import express from "express";
-import { login, logout, register, verifyOTP } from "../controllers/user.js";
+import { getUser, login, logout, register, verifyOTP } from "../controllers/user.js";
 import { registerValidationRules } from "../validators/user.js";
 import { isAuthenticated } from "../middlewars/auth.js";
 
@@ -16,5 +16,8 @@ router.post("/login", login);
 
 // POST:  /api/v1/user/logout
 router.get("/logout", isAuthenticated, logout);
+
+// GET:  /api/v1/user/profile
+router.get("/profile", isAuthenticated, getUser);
 
 export default router;
